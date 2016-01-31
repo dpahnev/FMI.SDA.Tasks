@@ -1,11 +1,14 @@
 package Tree;
 
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Stack;
 
 public class AVLTree<T extends Comparable<T>> implements AVLInterface<T>, Iterable<T> {
 	private int size;
 	private Node<T> root;
+	private T toHelpRemove;
 
 	public AVLTree() {
 		size = 0;
@@ -18,88 +21,75 @@ public class AVLTree<T extends Comparable<T>> implements AVLInterface<T>, Iterab
 		size = 1;
 	}
 
-	@Override // ready
+	@Override
 	public void insert(T value) {
-		Node<T> current = root;
-		while (current != null) {
-			int compare = (value.compareTo(current.getData()));
-			if (compare > 0) {
-				current = current.getRight();
-			} else if (compare < 0) {
-				current = current.getLeft();
-			} else {
-				return;// exeption
-			}
+		if (isEmpty()) {
+			root = new Node<T>(value);
+			size++;
+		} else {
+			root = insert(value, root);
+			size++;
 		}
-		current = new Node<T>(value);
-		size++;
-		balance();
 	}
 
-	@Override // ready
+	private Node<T> insert(T value, Node<T> root) {
+		if (root == null) {
+			return new Node<T>(value);
+		}
+		if (root.getData().compareTo(value) > 0) {
+			root.setLeft(insert(value, root.getLeft()));
+		} else {
+			root.setRight(insert(value, root.getRight()));
+		}
+		return balance(root);
+	}
+
+	@Override
 	public void remove(T key) {
 		if (isEmpty()) {
 			return;
-		}
-		Node<T> current = root;
-		Node<T> forRemove = search(key);
-		if (forRemove != null) {
-			if (forRemove.getLeft() == null && forRemove.getRight() == null) {
-				T value = forRemove.getData();
-				while (current.getLeft() == forRemove || current.getRight() == forRemove) {
-					int compare = (value.compareTo(current.getData()));
-					if (compare > 0) {
-						current = current.getRight();
-					} else if (compare < 0) {
-						current = current.getLeft();
-					}
-				}
-				if (current.getLeft() == forRemove) {
-					current.setLeft(null);
-				} else {
-					current.setRight(null);
-				}
-			} else if (forRemove.getLeft() != null && forRemove.getRight() != null) {
-				T temp = findLeastOfBrach(forRemove);
-				forRemove.setData(temp);
-			} else {
-				if (forRemove.getLeft() != null) {
-					forRemove.setData(forRemove.getData());
-				}
-				if (forRemove.getRight() != null) {
-					forRemove.setData(forRemove.getData());
-				}
-			}
 		} else {
-			return;
+			this.root = remove(key, root);
 		}
-		size--;
-		balance();
 	}
 
-	private T findLeastOfBrach(Node<T> root) {// ready
-		// if (root != null ){
-		Node<T> parent = root;
-		// if(root.getLeft() != null) {
-		Node<T> current = root.getLeft();
-		// }
-		// else {
-		T value;
-		// }
-		// }
-
-		while (current.getLeft() != null) {
-			parent = current;
-			current = current.getLeft();
+	private Node<T> remove(T value, Node<T> root) {
+		if (root == null) {
+			return null;
 		}
-		if (current.getRight() != null) {
-			value = current.getRight().getData();
-			current.setRight(null);
+		if (root.getData().compareTo(value) > 0) {
+			root.setLeft(remove(value, root.getLeft()));
+		} else if (root.getData().compareTo(value) < 0) {
+			root.setRight(remove(value, root.getRight()));
 		} else {
-			value = current.getData();
-			parent.setLeft(null);
+			size--;
+			if (root.getLeft() == null && root.getRight() == null) {
+				return null;
+			} else if (root.getRight() != null && root.getLeft() == null) {
+				return balance(root.getRight());
+			} else if (root.getLeft() != null && root.getRight() == null) {
+				return balance(root.getLeft());
+
+			} else {
+				if (root.getRight().getLeft() == null) {
+					root.getRight().setLeft(root.getLeft());
+					return balance(root.getRight());
+				} else {
+					root.setRight(leastLeaf(root.getRight()));
+					root.setData(toHelpRemove);
+				}
+			}
 		}
-		return value;
+		return balance(root);
+	}
+
+	private Node<T> leastLeaf(Node<T> right) {
+		if (right.getLeft() == null) {
+			this.toHelpRemove = right.getData();
+			return right.getRight();
+		} else
+			right.setLeft(leastLeaf(right.getLeft()));
+		return balance(right);
 	}
 
 	@Override // ready
@@ -130,8 +120,24 @@ public class AVLTree<T extends Comparable<T>> implements AVLInterface<T>, Iterab
 
 	@Override
 	public Iterator<T> iterator() {
-		// TODO Auto-generated method stub
-		return null;
+		ArrayList<T> items = new ArrayList<>();
+		Stack<Node<T>> stack = new Stack<>();
+		HashSet<Node<T>> checked = new HashSet<>();
+		stack.push(root);
+		while (stack.size() > 0) {
+			Node<T> current = stack.peek();
+			if (current.getLeft() == null || checked.contains(current.getLeft())) {
+				items.add(current.getData());
+				checked.add(current);
+				stack.pop();
+				if (current.getRight() != null) {
+					stack.push(current.getRight());
+				}
+			} else {
+				stack.push(current.getLeft());
+			}
+		}
+		return items.iterator();
 	}
 
 	public boolean isEmpty() {
@@ -139,14 +145,6 @@ public class AVLTree<T extends Comparable<T>> implements AVLInterface<T>, Iterab
 			return false;
 		else
 			return true;
-	}
-
-	private void iterateParents(Stack<Node<T>> parents) {
-		Stack<Node<T>> children = new Stack<>();
-		while (!parents.isEmpty()) {
-			Node<T> temp = parents.pop();
-			children.push(balance(temp));
-		}
 	}
 
 	private void correctHeight(Node<T> current) {// ready
@@ -166,7 +164,7 @@ public class AVLTree<T extends Comparable<T>> implements AVLInterface<T>, Iterab
 
 		} else if (balance == 2) {// rightRotation
 			if (balanceFactor(root.getLeft()) < 0) {
-				root.setLeft(rightRotation(root.getLeft()));
+				root.setLeft(leftRotation(root.getLeft()));
 			}
 			return rightRotation(root);
 		}
