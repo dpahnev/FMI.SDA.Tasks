@@ -5,7 +5,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Stack;
 
-public class AVLTree<T extends Comparable<T>> implements AVLInterface<T>, Iterable<T> {
+public class AVLTree<T extends Comparable<T>> implements IAVLTree<T> {
 	private int size;
 	private Node<T> root;
 	private T toHelpRemove;
@@ -22,7 +22,7 @@ public class AVLTree<T extends Comparable<T>> implements AVLInterface<T>, Iterab
 	}
 
 	@Override
-	public void insert(T value) {
+	public void insert(T value) throws ElementException {
 		if (isEmpty()) {
 			root = new Node<T>(value);
 			size++;
@@ -32,9 +32,12 @@ public class AVLTree<T extends Comparable<T>> implements AVLInterface<T>, Iterab
 		}
 	}
 
-	private Node<T> insert(T value, Node<T> root) {
+	private Node<T> insert(T value, Node<T> root) throws ElementException {
 		if (root == null) {
 			return new Node<T>(value);
+		}
+		if (root.getData().compareTo(value) == 0) {
+			throw new ElementException("This Element allready exist");
 		}
 		if (root.getData().compareTo(value) > 0) {
 			root.setLeft(insert(value, root.getLeft()));
@@ -45,24 +48,26 @@ public class AVLTree<T extends Comparable<T>> implements AVLInterface<T>, Iterab
 	}
 
 	@Override
-	public void remove(T key) {
+	public void remove(T key) throws ElementException {
 		if (isEmpty()) {
 			return;
 		} else {
 			this.root = remove(key, root);
+			size--;
 		}
 	}
 
-	private Node<T> remove(T value, Node<T> root) {
+	private Node<T> remove(T value, Node<T> root) throws ElementException {
 		if (root == null) {
-			return null;
+			throw new ElementException("Trying to remove nonexisting element.");
+			// return null;
 		}
 		if (root.getData().compareTo(value) > 0) {
 			root.setLeft(remove(value, root.getLeft()));
 		} else if (root.getData().compareTo(value) < 0) {
 			root.setRight(remove(value, root.getRight()));
 		} else {
-			size--;
+			// size--;
 			if (root.getLeft() == null && root.getRight() == null) {
 				return null;
 			} else if (root.getRight() != null && root.getLeft() == null) {
@@ -93,24 +98,23 @@ public class AVLTree<T extends Comparable<T>> implements AVLInterface<T>, Iterab
 	}
 
 	@Override // ready
-	public Node<T> search(T key) {
+	public boolean search(T key) {
 		if (isEmpty()) {
-			return null;
+			return false;
 		}
 		Node<T> current = this.root;
 		while (current != null) {
 			int compare = current.getData().compareTo(key);
 			if (compare == 0) {
-				return current;
-			}
-			if (compare > 0) {
+				return true;
+			} else if (compare > 0) {
 				current = current.getLeft();
-			}
-			if (compare < 0) {
+			} else {
 				current = current.getRight();
 			}
 		}
-		return null;
+		return false;
+
 	}
 
 	@Override
